@@ -144,16 +144,10 @@ function requireAuth(req, res, next) {
 // RESEND EMAIL
 // ======================================================
 
-async function sendEmail({
-  to,
-  subject,
-  text,
-  html
-}) {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.EMAIL_FROM;
+async function sendEmail({ to, subject, text, html }) {
+  const apiKey = process.env.BREVO_API_KEY;
+  const from = process.env.BREVO_FROM_EMAIL;
 
-  // Local development fallback
   if (!apiKey || !from) {
     console.log(
       `\n[NETCLONE DEV OTP] ${to}: ${
@@ -161,27 +155,37 @@ async function sendEmail({
       }\n`
     );
 
-    return {
-      dev: true
-    };
+    return { dev: true };
   }
 
   const response = await fetch(
-    'https://api.resend.com/emails',
+    'https://api.brevo.com/v3/smtp/email',
     {
       method: 'POST',
 
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
+        'accept': 'application/json',
+        'api-key': apiKey,
+        'content-type': 'application/json'
       },
 
       body: JSON.stringify({
-        from,
-        to: [to],
-        subject,
-        text,
-        html
+        sender: {
+          name: 'NetClone',
+          email: from
+        },
+
+        to: [
+          {
+            email: to
+          }
+        ],
+
+        subject: subject,
+
+        htmlContent: html,
+
+        textContent: text
       })
     }
   );
@@ -190,20 +194,37 @@ async function sendEmail({
 
   if (!response.ok) {
     console.error(
-      'RESEND ERROR:',
-      result
+      '================ BREVO ERROR ================'
+    );
+
+    console.error(
+      'Status:',
+      response.status
+    );
+
+    console.error(
+      'Response:',
+      JSON.stringify(result, null, 2)
+    );
+
+    console.error(
+      '================================================'
     );
 
     throw new Error(
       result?.message ||
-      'Resend failed to send email.'
+      result?.code ||
+      'Brevo failed to send email.'
     );
   }
 
   console.log(
-    `OTP email sent to ${to} via Resend. ID: ${
-      result.id || 'unknown'
-    }`
+    `OTP email sent to ${to} via Brevo.`
+  );
+
+  console.log(
+    'Brevo message ID:',
+    result.messageId || 'unknown'
   );
 
   return result;
