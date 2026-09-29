@@ -1,12 +1,497 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>NetClone - Verify</title><link rel="stylesheet" href="/auth/verify.css"><link rel="shortcut icon" href="/auth/favicon.ico"></head>
-<body><div class="netflix-bg"></div><div class="container"><div class="otp-card"><img src="/auth/favicon.ico" alt="NetClone" class="logo"><h1>Check your email</h1><p>We've sent a 6-digit code to <strong id="email">your email</strong>.</p><div class="otp-inputs" id="otp-inputs"><input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric"></div><p id="error-msg" class="error-text"></p><button id="verify-btn" class="verify-btn">Verify</button><div class="footer-links"><span>Didn't receive it?</span><a href="#" id="resend-link">Resend Code</a></div></div></div>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>NetClone - Verify</title>
+
+  <link rel="stylesheet" href="/auth/verify.css">
+  <link rel="shortcut icon" href="/auth/favicon.ico">
+</head>
+
+<body>
+
+  <div class="netflix-bg"></div>
+
+  <div class="container">
+    <div class="otp-card">
+
+      <img
+        src="/auth/favicon.ico"
+        alt="NetClone"
+        class="logo"
+      >
+
+      <h1>Check your email</h1>
+
+      <p>
+        We've sent a 6-digit code to
+        <strong id="email">your email</strong>.
+      </p>
+
+      <div class="otp-inputs" id="otp-inputs">
+        <input maxlength="1" inputmode="numeric" autocomplete="one-time-code">
+        <input maxlength="1" inputmode="numeric">
+        <input maxlength="1" inputmode="numeric">
+        <input maxlength="1" inputmode="numeric">
+        <input maxlength="1" inputmode="numeric">
+        <input maxlength="1" inputmode="numeric">
+      </div>
+
+      <p id="error-msg" class="error-text"></p>
+
+      <button id="verify-btn" class="verify-btn">
+        Verify
+      </button>
+
+      <div class="footer-links">
+        <span>Didn't receive it?</span>
+        <a href="#" id="resend-link">Resend Code</a>
+      </div>
+
+    </div>
+  </div>
+
+
 <script>
-const inputs=[...document.querySelectorAll('.otp-inputs input')], errorMsg=document.getElementById('error-msg');
-fetch('/api/auth/me').then(r=>r.json()).then(x=>{if(x.email)document.getElementById('email').textContent=x.email;});
-inputs.forEach((input,i)=>{input.addEventListener('input',e=>{e.target.value=e.target.value.replace(/\D/g,'').slice(0,1);if(e.target.value&&i<5)inputs[i+1].focus();});input.addEventListener('keydown',e=>{if(e.key==='Backspace'&&!e.target.value&&i>0)inputs[i-1].focus();});input.addEventListener('paste',e=>{const d=e.clipboardData.getData('text').replace(/\D/g,'').slice(0,6);if(d.length===6){e.preventDefault();d.split('').forEach((c,j)=>inputs[j].value=c);inputs[5].focus();}});});
-function error(m){errorMsg.textContent=m;errorMsg.style.display='block';}
-async function verify(){const otp=inputs.map(x=>x.value).join('');if(otp.length!==6)return error('Please enter all 6 digits.');const r=await fetch('/api/auth/verify-otp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({otp})});const d=await r.json();if(!r.ok)return error(d.message||'Incorrect code.');window.location.href='/browse';}
-document.getElementById('verify-btn').onclick=verify;
-document.getElementById('resend-link').onclick=async e=>{e.preventDefault();const r=await fetch('/api/auth/resend-otp',{method:'POST'});const d=await r.json();if(!r.ok)return error(d.message||'Could not resend code.');errorMsg.style.display='block';errorMsg.style.color='#46d369';errorMsg.textContent='A new code was sent.';};
-</script></body></html>
+
+const inputs = [
+  ...document.querySelectorAll('.otp-inputs input')
+];
+
+const errorMsg = document.getElementById('error-msg');
+const emailElement = document.getElementById('email');
+const verifyBtn = document.getElementById('verify-btn');
+const resendLink = document.getElementById('resend-link');
+
+
+/* --------------------------------
+   GET EMAIL FROM PENDING COOKIE
+-------------------------------- */
+
+function getPendingEmail() {
+
+  const match = document.cookie.match(
+    /(?:^|;\s*)netclone_pending=([^;]+)/
+  );
+
+  if (!match) {
+    return '';
+  }
+
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return match[1];
+  }
+}
+
+
+/* --------------------------------
+   GET EMAIL
+-------------------------------- */
+
+async function loadEmail() {
+
+  let email = getPendingEmail();
+
+  /*
+    Also check localStorage in case
+    the login/signup page stored it.
+  */
+
+  if (!email) {
+    email = localStorage.getItem('netclone_email') || '';
+  }
+
+  /*
+    Try /api/auth/me as another fallback.
+  */
+
+  if (!email) {
+
+    try {
+
+      const response = await fetch('/api/auth/me', {
+        credentials: 'include'
+      });
+
+      const data = await response.json();
+
+      if (data.email) {
+        email = data.email;
+      }
+
+    } catch (error) {
+      console.log('Could not load email:', error);
+    }
+  }
+
+
+  if (email) {
+
+    emailElement.textContent = email;
+
+    /*
+      Save it so the page can use it again.
+    */
+
+    localStorage.setItem('netclone_email', email);
+
+  } else {
+
+    emailElement.textContent = 'your email';
+
+  }
+
+  return email;
+}
+
+
+/* --------------------------------
+   OTP INPUTS
+-------------------------------- */
+
+inputs.forEach((input, index) => {
+
+  input.addEventListener('input', (event) => {
+
+    event.target.value =
+      event.target.value
+        .replace(/\D/g, '')
+        .slice(0, 1);
+
+    if (
+      event.target.value &&
+      index < inputs.length - 1
+    ) {
+      inputs[index + 1].focus();
+    }
+
+  });
+
+
+  input.addEventListener('keydown', (event) => {
+
+    if (
+      event.key === 'Backspace' &&
+      !event.target.value &&
+      index > 0
+    ) {
+
+      inputs[index - 1].focus();
+
+    }
+
+  });
+
+
+  input.addEventListener('paste', (event) => {
+
+    const pasted = event.clipboardData
+      .getData('text')
+      .replace(/\D/g, '')
+      .slice(0, 6);
+
+    if (pasted.length === 6) {
+
+      event.preventDefault();
+
+      pasted.split('').forEach((digit, i) => {
+
+        if (inputs[i]) {
+          inputs[i].value = digit;
+        }
+
+      });
+
+      inputs[5].focus();
+
+    }
+
+  });
+
+});
+
+
+/* --------------------------------
+   ERROR MESSAGE
+-------------------------------- */
+
+function showError(message) {
+
+  errorMsg.style.display = 'block';
+  errorMsg.style.color = '#e50914';
+  errorMsg.textContent = message;
+
+}
+
+
+/* --------------------------------
+   SUCCESS MESSAGE
+-------------------------------- */
+
+function showSuccess(message) {
+
+  errorMsg.style.display = 'block';
+  errorMsg.style.color = '#46d369';
+  errorMsg.textContent = message;
+
+}
+
+
+/* --------------------------------
+   VERIFY OTP
+-------------------------------- */
+
+async function verify() {
+
+  const otp = inputs
+    .map(input => input.value)
+    .join('');
+
+  if (otp.length !== 6) {
+
+    showError('Please enter all 6 digits.');
+
+    return;
+
+  }
+
+
+  /*
+    Get email from cookie/localStorage.
+  */
+
+  let email = getPendingEmail();
+
+  if (!email) {
+    email = localStorage.getItem('netclone_email') || '';
+  }
+
+
+  /*
+    If email is still missing,
+    try loading it again.
+  */
+
+  if (!email) {
+    email = await loadEmail();
+  }
+
+
+  if (!email) {
+
+    showError(
+      'Email information is missing. Please request a new code.'
+    );
+
+    return;
+
+  }
+
+
+  verifyBtn.disabled = true;
+  verifyBtn.textContent = 'Verifying...';
+
+
+  try {
+
+    const response = await fetch(
+      '/api/auth/verify-otp',
+      {
+        method: 'POST',
+
+        headers: {
+          'Content-Type': 'application/json'
+        },
+
+        /*
+          IMPORTANT:
+          Send cookies with the request.
+        */
+
+        credentials: 'include',
+
+        body: JSON.stringify({
+          email: email,
+          otp: otp
+        })
+      }
+    );
+
+
+    const data = await response.json();
+
+
+    if (!response.ok) {
+
+      showError(
+        data.message || 'Incorrect verification code.'
+      );
+
+      verifyBtn.disabled = false;
+      verifyBtn.textContent = 'Verify';
+
+      return;
+
+    }
+
+
+    /*
+      Verification successful.
+    */
+
+    showSuccess('Email verified successfully!');
+
+    /*
+      Remove saved email after successful login.
+    */
+
+    localStorage.removeItem('netclone_email');
+
+
+    /*
+      Go to NetClone homepage.
+    */
+
+    setTimeout(() => {
+
+      window.location.href = '/browse';
+
+    }, 500);
+
+
+  } catch (error) {
+
+    console.error('VERIFY ERROR:', error);
+
+    showError(
+      'Something went wrong. Please try again.'
+    );
+
+    verifyBtn.disabled = false;
+    verifyBtn.textContent = 'Verify';
+
+  }
+
+}
+
+
+/* --------------------------------
+   VERIFY BUTTON
+-------------------------------- */
+
+verifyBtn.addEventListener(
+  'click',
+  verify
+);
+
+
+/* --------------------------------
+   RESEND OTP
+-------------------------------- */
+
+resendLink.addEventListener(
+  'click',
+  async (event) => {
+
+    event.preventDefault();
+
+
+    resendLink.style.pointerEvents = 'none';
+    resendLink.style.opacity = '0.5';
+
+
+    try {
+
+      const response = await fetch(
+        '/api/auth/resend-otp',
+        {
+          method: 'POST',
+
+          /*
+            IMPORTANT:
+            Send pending cookie.
+          */
+
+          credentials: 'include',
+
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+
+      const data = await response.json();
+
+
+      if (!response.ok) {
+
+        showError(
+          data.message || 'Could not resend code.'
+        );
+
+        resendLink.style.pointerEvents = 'auto';
+        resendLink.style.opacity = '1';
+
+        return;
+
+      }
+
+
+      showSuccess(
+        'A new verification code was sent to your email.'
+      );
+
+
+      /*
+        Clear old OTP boxes.
+      */
+
+      inputs.forEach(input => {
+        input.value = '';
+      });
+
+
+      inputs[0].focus();
+
+
+    } catch (error) {
+
+      console.error('RESEND ERROR:', error);
+
+      showError(
+        'Could not resend the code. Please try again.'
+      );
+
+    }
+
+
+    /*
+      Enable resend again after 5 seconds.
+    */
+
+    setTimeout(() => {
+
+      resendLink.style.pointerEvents = 'auto';
+      resendLink.style.opacity = '1';
+
+    }, 5000);
+
+  }
+);
+
+
+/* --------------------------------
+   INITIALIZE PAGE
+-------------------------------- */
+
+loadEmail();
+
+</script>
+
+</body>
+</html>
