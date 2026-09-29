@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NetClone - Sign In</title>
+  <link rel="stylesheet" href="/auth/sign.css">
+  <link rel="shortcut icon" href="/auth/favicon.ico" type="image/x-icon">
+</head>
+<body>
+  <div class="overlay"></div>
+  <a href="/"><img class="logo" src="/auth/logo.png" alt="NetClone"></a>
+  <div class="form-wrapper">
+    <h2>Sign In</h2>
+    <form id="auth-form">
+      <div class="form-control"><input id="email" type="email" autocomplete="email" required><label>Email</label></div>
+      <div class="form-control"><input id="password" type="password" autocomplete="current-password" minlength="6" required><label>Password</label></div>
+      <button id="submit-btn" type="submit">Continue</button>
+      <div id="message" style="margin-top:12px;color:#e87c03;display:none"></div>
+      <div class="form-help"><div class="remember-me"><input type="checkbox" id="remember-me"><label for="remember-me">Remember me</label></div><a href="/">Back</a></div>
+    </form>
+    <p>New to NetClone? <a href="#" id="signup-link">Sign up now</a></p>
+    <small>Enter your email and password. We will send a 6-digit verification code to your email before you enter NetClone.</small>
+  </div>
+<script>
+const form=document.getElementById('auth-form'), message=document.getElementById('message'), btn=document.getElementById('submit-btn');
+let mode='signin';
+document.getElementById('signup-link').addEventListener('click',e=>{e.preventDefault(); mode=mode==='signin'?'signup':'signin'; document.querySelector('h2').textContent=mode==='signup'?'Create account':'Sign In'; btn.textContent=mode==='signup'?'Create account':'Continue'; document.getElementById('signup-link').textContent=mode==='signup'?'Already have an account? Sign in':'Sign up now';});
+form.addEventListener('submit',async e=>{e.preventDefault(); message.style.display='none'; btn.disabled=true; btn.textContent='Sending code...';
+try{const r=await fetch('/api/auth/request-otp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email.value,password:password.value,mode})}); const data=await r.json(); if(!r.ok) throw new Error(data.message||'Could not continue'); window.location.href='/verify';}catch(err){message.textContent=err.message;message.style.display='block';btn.disabled=false;btn.textContent=mode==='signup'?'Create account':'Continue';}});
+</script>
+</body></html>

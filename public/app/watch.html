@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <base href="/app/">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Watch - Net-Clone</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="watch-page">
+
+    <nav class="navbar">
+
+        <div class="logo">
+            <img src="assets/logo/netclone-n.png" alt="Net-Clone">
+        </div>
+
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="index.html">Movies</a>
+            <a href="index.html">Series</a>
+            <a href="index.html">Anime</a>
+        </div>
+
+    </nav>
+
+
+    <main class="watch-container">
+
+        <div class="video-container">
+
+            <video
+                id="video-player"
+                controls
+                playsinline
+            >
+            <source
+                 src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"
+                 type="video/mp4"
+            >
+
+                Your browser does not support HTML5 video.
+            </video>
+
+        </div>
+
+
+        <div class="watch-info">
+
+            <h1 id="watch-title">Loading...</h1>
+
+            <p id="watch-meta"></p>
+
+            <p id="watch-overview"></p>
+
+        </div>
+
+    </main>
+
+
+    <script src="watch.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <base href="/app/">
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>NetClone</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <nav>
+        <img
+            class="logo"
+            src="assets/logo/netclone-n.png"
+            alt="NetClone"
+        >
+
+        <div class="nav-links">
+            <a href="#">Home</a>
+            <a href="#">Movie</a>
+            <a href="#">Series</a>
+            <a href="#">Anime</a>
+            <a href="#">Genres</a>
+        </div>
+
+        <div class="account-area">
+            <span id="account-email"></span>
+            <button id="logout-btn" class="logout-button">
+                Logout
+            </button>
+        </div>
+
+        <button class="menu-button" type="button" aria-label="Open menu">
+            ☰
+        </button>
+    </nav>
+
+    <main>
+        <section class="hero">
+            <div class="hero-content">
+                <p class="hero-label">FEATURED</p>
+
+                <h1 class="hero-title">Movie Title</h1>
+
+                <div class="movie-info">
+                    <span>⭐ 8.7</span>
+                    <span>2026</span>
+                    <span>2h 10m</span>
+                </div>
+
+                <p class="description">
+                    A short description of the featured movie goes here.
+                </p>
+
+                <div class="hero-buttons">
+                    <button type="button">▶ Watch Now</button>
+                    <button type="button">＋ My List</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="content-section">
+            <h2>Trending Movies</h2>
+            <div class="movies-row" id="movie-row"></div>
+        </section>
+
+        <section class="content-section">
+            <h2>⭐ Top Rated Movies</h2>
+            <div class="movie-row" id="top-rated-row"></div>
+        </section>
+
+        <section class="content-section">
+            <h2>🎬 Popular Movies</h2>
+            <div class="movie-row" id="popular-row"></div>
+        </section>
+    </main>
+
+    <script>
+        fetch("/api/auth/me")
+            .then(function (response) {
+                return response.json();
+            })
+            .then(function (user) {
+                if (!user.authenticated) {
+                    window.location.href = "/signin";
+                    return;
+                }
+
+                document.getElementById("account-email").textContent =
+                    user.email;
+            })
+            .catch(function () {
+                window.location.href = "/signin";
+            });
+
+        document
+            .getElementById("logout-btn")
+            .addEventListener("click", function () {
+                fetch("/api/auth/logout", {
+                    method: "POST"
+                }).then(function () {
+                    window.location.href = "/";
+                });
+            });
+    </script>
+
+    <script src="script.js"></script>
+</body>
+</html>
