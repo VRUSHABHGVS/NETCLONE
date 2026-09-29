@@ -63,7 +63,13 @@ async function smtpSend({to, subject, text, html}) {
     return { dev: true };
   }
   if (port !== 465) throw new Error('This built-in mailer currently expects SMTP port 465 (implicit TLS).');
-  const socket = tls.connect({host, port, servername:host, rejectUnauthorized:true});
+const socket = tls.connect({
+  host,
+  port,
+  family: 4,
+  servername: host,
+  rejectUnauthorized: true
+});
   const lines=[]; let buffer='';
   const waitFor = (codes) => new Promise((resolve,reject)=>{
     const wanted = Array.isArray(codes)?codes: [codes];
